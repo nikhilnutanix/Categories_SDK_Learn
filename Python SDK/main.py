@@ -1,10 +1,24 @@
+# import sys
+# import os
 
-import ntnx_prism_py_client
+# # Add the directory to sys.path
+# sys.path.append('/Users/nikhil.saraswat/ntnx-api-categories/categories-mvc-api-codegen/categories-mvc-python-client-sdk/target/generated-sources/swagger')
 
-if __name__ == "__main__":
-    # Configure the client
-    config = ntnx_prism_py_client.Configuration()
+# Now you can import modules from this directory
+import json
+import uuid
+import ntnx_categories_py_client  # Replace with the actual module name
+
+# suppress warnings
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+
+    
+def createClient():
+    config = ntnx_categories_py_client.Configuration()
     config.verify_ssl = False
+
     # IPv4/IPv6 address or FQDN of the cluster
     config.host = "10.15.4.38"
     # Port to which to connect to
@@ -17,22 +31,167 @@ if __name__ == "__main__":
     config.username = "admin"
     # Password to connect to the cluster
     config.password = "Nutanix.123"
+
     # Please add authorization information here if needed.
-    client = ntnx_prism_py_client.ApiClient(configuration=config)
-    #disable SSL verification
-    client.rest_client.pool_manager.ca_certs = False
-    # Create an instance of the API class
-    categories_api = ntnx_prism_py_client.CategoriesApi(api_client=client)
-    page = 10
-    limit = 100
+    client_ = ntnx_categories_py_client.ApiClient(configuration=config)
+    
+    return client_
 
-
+def ListCategories(categories_api, filter):
     try:
-        # disable SSL verification
-
         # Get all categories
-        api_response = categories_api.get_all_categories(_page=page, _limit=limit)
-        print(api_response)
-        # print("hello")
-    except ntnx_prism_py_client.rest.ApiException as e:
+        api_response = categories_api.list_categories(_filter=filter)
+        return api_response
+    except Exception as e:
         print(e)
+        return None
+        
+        
+def GetCategoryById(categories_api, extId):
+    try:
+        # Get all categories
+        api_response = categories_api.get_category_by_id(extId)
+        return api_response, None
+    except Exception as e:
+        # print(e)
+        code = getErrorCode(e)
+        return None, code
+
+def getErrorCode(e):
+    data = json.loads(e.body)
+    # Extract the "code"
+    code = data['error'][0]['code']
+    return code
+
+        
+def CreateCategory(categories_api, key, value, description):
+    try:
+        # Get all categories
+        cat = ntnx_categories_py_client.Category(key=key, value=value, description=description)
+        # print(cat.to_str())
+        try:
+            api_response = categories_api.create_category(body=cat)
+            # print(api_response)
+            return api_response, None
+        except Exception as e:
+            # print(e)
+            code = getErrorCode(e)
+            print(f"Error Code: {code}")
+            return None, code
+    except Exception as e:
+        print(e)
+        return None, None
+
+
+def DeleteCategoryById(categories_api, extId):
+    try:
+        # Get all categories
+        api_response = categories_api.delete_category_by_id(extId)
+        return api_response, None
+    except Exception as e:
+        print(e)
+        code = getErrorCode(e)
+        return None, code
+
+
+def UpdateCategoryById(categories_api, extId, cat):
+    try:
+        # Get all categories
+        api_response = categories_api.update_category_by_id(extId, body=cat)
+        return api_response
+    except Exception as e:
+        print(e)
+        return None
+
+
+
+if __name__ == "__main__":
+    client = createClient()
+    # Create an instance of the API class
+    categories_api = ntnx_categories_py_client.CategoriesApi(api_client=client)
+    # random uuid append to key and value
+    key = f"key-{uuid.uuid4()}"
+    value = f"value-{uuid.uuid4()}"
+    print(f"Key: {key}, Value: {value}")
+    description = "Description"
+    # CreateCategory 
+    createCategoryResp, _ = CreateCategory(categories_api, key, value, description)
+    print(createCategoryResp)
+    # get extId from createCategoryResp
+    extId = createCategoryResp.data.ext_id
+    print(f"extId: {extId}")
+
+
+    createCategoryResp, err_code = CreateCategory(categories_api, key, value, description)
+    if err_code != "CTGRS-50023":
+        print(f"CreateCategory: Expected Error Code: CTGRS-50023, Got: {err_code}")
+
+    # Use ListCategories to get the created category using filter
+    filter = f"key eq '{key}' and value eq '{value}'"
+    # check count of categories
+    ListCategoriesResp = ListCategories(categories_api, filter)
+    print(ListCategoriesResp)
+    if ListCategoriesResp.metadata.total_available_results != 1:
+        print(f"ListCategories: Expected Total Entities: 1, Got: {ListCategoriesResp.data.total_entities}")
+    elif ListCategoriesResp.data[0].ext_id != extId:
+        print(f"ListCategories: Expected extId: {extId}, Got: {ListCategoriesResp.data[0].ext_id}")
+    else:
+        print("ListCategories: Success")
+
+
+    # use the get api to get the category by ext_id
+    GetCategoryByIdResp, _ = GetCategoryById(categories_api, extId)
+    # get eTag from GetCategoryByIdResp
+    eTag = ntnx_categories_py_client.ApiClient().get_etag(GetCategoryByIdResp)
+    print(f"eTag: {eTag}")
+    newDescription = "New Description"
+    # update the category with new description
+    cat = ntnx_categories_py_client.Category(key=key, value=value, description=newDescription, owner_uuid=GetCategoryByIdResp.data.owner_uuid)
+    # create kwargs for update_category
+    kwargs = {"if_match": eTag}
+    UpdateCategoryByIdResp = UpdateCategoryById(categories_api, extId, cat)
+    print(UpdateCategoryByIdResp)
+
+
+    # use list apis to verify that the update is successful
+    ListCategoriesResp = ListCategories(categories_api, filter)
+    print(ListCategoriesResp)
+    if ListCategoriesResp.metadata.total_available_results != 1:
+        print(f"ListCategories: Expected Total Entities: 1, Got: {ListCategoriesResp.data.total_entities}")
+    elif ListCategoriesResp.data[0].description != newDescription:
+        print(f"ListCategories: Expected Description: {newDescription}, Got: {ListCategoriesResp.data[0].description}")
+    else:
+        print("ListCategories: Success")
+
+    # use get apis to verify that the update is successful
+    GetCategoryByIdResp, _ = GetCategoryById(categories_api, extId)
+    print(GetCategoryByIdResp)
+    if GetCategoryByIdResp.data.description != newDescription:
+        print(f"GetCategoryById: Expected Description: {newDescription}, Got: {GetCategoryByIdResp.data.description}")
+    else:
+        print("GetCategoryById: Success")
+
+    # use the delete api to delete the category
+    DeleteCategoryByIdResp, _ = DeleteCategoryById(categories_api, extId)
+    print(DeleteCategoryByIdResp)
+
+    # use the get api to verify that the category is deleted and validate the response code is 404
+    GetCategoryByIdResp, err_code = GetCategoryById(categories_api, extId)
+    if err_code != "CTGRS-50006":
+        print(f"GetCategoryById: Expected Error Code: CTGRS-50006, Got: {err_code}")
+    else:
+        print("GetCategoryById: Success")
+
+    # use delete api to verify that the category is already deleted and validate the response code is 404
+    DeleteCategoryByIdResp, err_code = DeleteCategoryById(categories_api, extId)
+    if err_code != "CTGRS-50006":
+        print(f"DeleteCategoryById: Expected Error Code: CTGRS-50006, Got: {err_code}")
+    else:
+        print("DeleteCategoryById: Success")
+
+    # use the list api to verify that the category is deleted
+    ListCategoriesResp = ListCategories(categories_api, filter)
+    if ListCategoriesResp.metadata.total_available_results != 0:
+        print(f"ListCategories: Expected Total Entities: 0, Got: {ListCategoriesResp.data.total_entities}")
+    else:
+        print("ListCategories: Success")
