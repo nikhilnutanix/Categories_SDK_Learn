@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"log"
-
+	"flag"
+	"github.com/golang/glog"
 	"github.com/nutanix-core/ntnx-api-golang-sdk-internal/prism-go-client/v17/api"
 	"github.com/nutanix-core/ntnx-api-golang-sdk-internal/prism-go-client/v17/client"
 	import1 "github.com/nutanix-core/ntnx-api-golang-sdk-internal/prism-go-client/v17/models/prism/v4/config"
@@ -56,16 +57,17 @@ func getErrorCode(err error) string {
 	}
 }
 
-
-
 func main() {
+	// Parse the command-line flags
+	flag.Parse()
+	flag.Set("alsologtostderr", "true")
 	ApiClientInstance := getApiClientInstance()
 	CategoriesApiInstance := getCategoriesApiInstance(ApiClientInstance)
 
-
 	key := "key-" + uuid.New().String()
 	value := "value-" + uuid.New().String()
-	println("key: ", key, " value: ", value)
+	// println("key: ", key, " value: ", value)
+	glog.Info("key: ", key, " value: ", value)
 	description := "description"
 	category := &import1.Category{
 		Key:         &key,
@@ -74,52 +76,66 @@ func main() {
 	}
 	createCategoryResponse, err := CategoriesApiInstance.CreateCategory(category, nil, nil)
 	if err != nil {
-		fmt.Println(err)
+		// fmt.Println(err)
+		glog.Error(err)
 		return
 	}
 	cat := createCategoryResponse.GetData().(import1.Category)
-	fmt.Println("ExtId: ", *cat.ExtId)
+	// fmt.Println("ExtId: ", *cat.ExtId)
+	glog.Info("ExtId: ", *cat.ExtId)
 
 	// try to again create the same category
 	_, err = CategoriesApiInstance.CreateCategory(category, nil, nil)
 	if err != nil {
-		fmt.Println(err.Error())
+		// fmt.Println(err.Error())
+		glog.Error(err)
 		code := getErrorCode(err)
 		if code != "CTGRS-50023" {
-			fmt.Println("CreateCategory: Expected error code: CTGRS-50023, but got: ", code)
+			// fmt.Println("CreateCategory: Expected error code: CTGRS-50023, but got: ", code)
+			glog.Error("CreateCategory: Expected error code: CTGRS-50023, but got: ", code)
 		}
 	} else {
-		fmt.Println("CreateCategory: Expected error: Category already exists, but got none")
+		// fmt.Println("CreateCategory: Expected error: Category already exists, but got none")
+		glog.Error("CreateCategory: Expected error: Category already exists, but got none")
+		return
 	}
-	// cat = createCategoryResponse.GetData().(import1.Category)
+
 	filter := "key eq '" + key + "' and value eq '" + value + "'"
 	listCategoriesResponse, err := CategoriesApiInstance.ListCategories(nil, nil, &filter, nil, nil, nil)
 	if err != nil {
-		fmt.Println(err)
+		// fmt.Println(err)
+		glog.Error(err)
 		return
 	}
 	data := listCategoriesResponse.GetData().([]import1.Category)
 	if len(data) != 1 {
-		fmt.Println("ListCategories: Expected 1 category, but got ", len(data))
-	} else {
-		fmt.Println("ListCategories: Category found!")
+		// fmt.Println("ListCategories: Expected 1 category, but got ", len(data))
+		glog.Error("ListCategories: Expected 1 category, but got ", len(data))
+		return
 	}
 	// print the ext_id of the category returned
 	fmt.Println("ExtId: ", *data[0].ExtId)
 	if *data[0].ExtId != *cat.ExtId {
-		fmt.Println("ListCategories: Expected category ext_id: ", *cat.ExtId, " but got: ", *data[0].ExtId)
+		// fmt.Println("ListCategories: Expected category ext_id: ", *cat.ExtId, " but got: ", *data[0].ExtId)
+		glog.Error("ListCategories: Expected category ext_id: ", *cat.ExtId, " but got: ", *data[0].ExtId)
 	}
+	// fmt.Println("ListCategories: Category found!")
+	glog.Info("ListCategories: Category found!")
 	// use the get api to get the category by ext_id
 	getCategoryResponse, err := CategoriesApiInstance.GetCategoryById(data[0].ExtId, nil, nil)
 	if err != nil {
-		fmt.Println(err)
+		// fmt.Println(err)
+		glog.Error(err)
 		return
 	}
+	// fmt.Println("GetCategoryById: Category found!")
+	glog.Info("GetCategoryById: Category found!")
 	cat = getCategoryResponse.GetData().(import1.Category)
 	// get eTag of the category
 	eTag := client.NewApiClient().GetEtag(getCategoryResponse.GetData())
 	// print the eTag
-	fmt.Println("eTag: ", eTag)
+	// fmt.Println("eTag: ", eTag)
+	glog.Info("eTag: ", eTag)
 	newDescription := "new description"
 	category.Description = &newDescription
 	category.OwnerUuid = cat.OwnerUuid
@@ -130,47 +146,57 @@ func main() {
 
 	_, err = CategoriesApiInstance.UpdateCategoryById(data[0].ExtId, category, nil)
 	if err != nil {
-		fmt.Println(err)
+		// fmt.Println(err)
+		glog.Error(err)
 		return
 	} else {
-		fmt.Println("update done successfully")
+		// fmt.Println("Update done successfully")
+		glog.Info("Update done successfully")
 	}
 	// use list apis to verify that the update is successful.
 	listCategoriesResponse, err = CategoriesApiInstance.ListCategories(nil, nil, &filter, nil, nil, nil)
 	if err != nil {
-		fmt.Println(err)
+		// fmt.Println(err)
+		glog.Error(err)
 		return
 	}
 	data = listCategoriesResponse.GetData().([]import1.Category)
 	if len(data) != 1 {
-		fmt.Println("ListCategories: Expected 1 category, but got ", len(data))
+		// fmt.Println("ListCategories: Expected 1 category, but got ", len(data))
+		glog.Error("ListCategories: Expected 1 category, but got ", len(data))
 	} else {
 		// check if the description is updated
 		if *data[0].Description != newDescription {
-			fmt.Println("ListCategories: Expected description: ", newDescription, " but got: ", *data[0].Description)
+			// fmt.Println("ListCategories: Expected description: ", newDescription, " but got: ", *data[0].Description)
+			glog.Error("ListCategories: Expected description: ", newDescription, " but got: ", *data[0].Description)
 		} else {
-			fmt.Println("ListCategories: Category updated successfully!")
+			// fmt.Println("ListCategories: Category updated successfully!")
+			glog.Info("ListCategories: Category updated successfully!")
 		}
 	}
 
 	// use get apis to verify that the update is successful
 	getCategoryResponse, err = CategoriesApiInstance.GetCategoryById(data[0].ExtId, nil, nil)
 	if err != nil {
-		fmt.Println(err)
+		// fmt.Println(err)
+		glog.Error(err)
 		return
 	}
 	cat = getCategoryResponse.GetData().(import1.Category)
 	// check if the description is updated
 	if *cat.Description != newDescription {
-		fmt.Println("GetCategoryById: Expected description: ", newDescription, " but got: ", *cat.Description)
+		// fmt.Println("GetCategoryById: Expected description: ", newDescription, " but got: ", *cat.Description)
+		glog.Error("GetCategoryById: Expected description: ", newDescription, " but got: ", *cat.Description)
 	} else {
-		fmt.Println("GetCategoryById: Category updated successfully!")
+		// fmt.Println("GetCategoryById: Category updated successfully!")
+		glog.Info("GetCategoryById: Category updated successfully!")
 	}
 
 	// use the delete api to delete the category
 	_, err = CategoriesApiInstance.DeleteCategoryById(data[0].ExtId, nil)
 	if err != nil {
-		fmt.Println(err)
+		// fmt.Println(err)
+		glog.Error(err)
 		return
 	}
 
@@ -179,12 +205,15 @@ func main() {
 	if err != nil {
 		code := getErrorCode(err)
 		if code != "CTGRS-50006" {
-			fmt.Println("GetCategoryById: Expected error code: CTGRS-50006, but got: ", code)
+			// fmt.Println("GetCategoryById: Expected error code: CTGRS-50006, but got: ", code)
+			glog.Error("GetCategoryById: Expected error code: CTGRS-50006, but got: ", code)
 		} else {
-			fmt.Println("GetCategoryById: Category deleted successfully!")
+			// fmt.Println("GetCategoryById: Category deleted successfully!")
+			glog.Info("GetCategoryById: Category deleted successfully!")
 		}
 	} else {
-		fmt.Println("GetCategoryById: Expected error: Category not found, but got none")
+		// fmt.Println("GetCategoryById: Expected error: Category not found, but got none")
+		glog.Error("GetCategoryById: Expected error: Category not found, but got none")
 	}
 
 	// use delete api to verify that the category is already deleted and validate the response code is 404
@@ -192,24 +221,31 @@ func main() {
 	if err != nil {
 		code := getErrorCode(err)
 		if code != "CTGRS-50006" {
-			fmt.Println("DeleteCategoryById: Expected error code: CTGRS-50006, but got: ", code)
+			// fmt.Println("DeleteCategoryById: Expected error code: CTGRS-50006, but got: ", code)
+			glog.Error("DeleteCategoryById: Expected error code: CTGRS-50006, but got: ", code)
 		} else {
-			fmt.Println("DeleteCategoryById: Category already deleted!")
+			// fmt.Println("DeleteCategoryById: Category already deleted!")
+			glog.Info("DeleteCategoryById: Category already deleted!")
 		}
 	} else {
-		fmt.Println("DeleteCategoryById: Expected error: Category not found, but got none")
+		// fmt.Println("DeleteCategoryById: Expected error: Category not found, but got none")
+		glog.Error("DeleteCategoryById: Expected error: Category not found, but got none")
 	}
 
 	// use the list api to verify that the category is deleted
 	listCategoriesResponse, err = CategoriesApiInstance.ListCategories(nil, nil, &filter, nil, nil, nil)
 	if err != nil {
-		fmt.Println(err)
+		// fmt.Println(err)
+		glog.Error(err)
 		return
 	}
 	if listCategoriesResponse.GetData() == nil {
-		fmt.Println("ListCategories: Category deleted successfully!")
+		// fmt.Println("ListCategories: Category deleted successfully!")
+		glog.Info("ListCategories: Category deleted successfully!")
 	} else {
-		fmt.Println("ListCategories: Expected nil category, but got ", listCategoriesResponse.GetData())
+		// fmt.Println("ListCategories: Expected nil category, but got ", listCategoriesResponse.GetData())
+		glog.Error("ListCategories: Expected nil category, but got ", listCategoriesResponse.GetData())
 	}
+	glog.Flush()
 
 }
