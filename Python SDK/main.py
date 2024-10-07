@@ -43,7 +43,7 @@ def ListCategories(categories_api, filter):
         api_response = categories_api.list_categories(_filter=filter)
         return api_response
     except Exception as e:
-        print(e)
+        # print(e)
         return None
         
         
@@ -89,15 +89,15 @@ def DeleteCategoryById(categories_api, extId):
         api_response = categories_api.delete_category_by_id(extId)
         return api_response, None
     except Exception as e:
-        print(e)
+        # print(e)
         code = getErrorCode(e)
         return None, code
 
 
-def UpdateCategoryById(categories_api, extId, cat):
+def UpdateCategoryById(categories_api, extId, cat, kwargs):
     try:
         # Get all categories
-        api_response = categories_api.update_category_by_id(extId, body=cat)
+        api_response = categories_api.update_category_by_id(extId, body=cat, **kwargs)
         return api_response
     except Exception as e:
         print(e)
@@ -116,11 +116,11 @@ if __name__ == "__main__":
     description = "Description"
     # CreateCategory 
     createCategoryResp, _ = CreateCategory(categories_api, key, value, description)
-    print(createCategoryResp)
+    # print(createCategoryResp)
     # get extId from createCategoryResp
     extId = createCategoryResp.data.ext_id
     print(f"extId: {extId}")
-
+    print(f"Category Created successfully with extId: {extId}")
 
     createCategoryResp, err_code = CreateCategory(categories_api, key, value, description)
     if err_code != "CTGRS-50023":
@@ -130,13 +130,13 @@ if __name__ == "__main__":
     filter = f"key eq '{key}' and value eq '{value}'"
     # check count of categories
     ListCategoriesResp = ListCategories(categories_api, filter)
-    print(ListCategoriesResp)
+    # print(ListCategoriesResp)
     if ListCategoriesResp.metadata.total_available_results != 1:
         print(f"ListCategories: Expected Total Entities: 1, Got: {ListCategoriesResp.data.total_entities}")
     elif ListCategoriesResp.data[0].ext_id != extId:
         print(f"ListCategories: Expected extId: {extId}, Got: {ListCategoriesResp.data[0].ext_id}")
     else:
-        print("ListCategories: Success")
+        print(f"ListCategories: Success --> Category Created with extId: {extId}")
 
 
     # use the get api to get the category by ext_id
@@ -149,49 +149,50 @@ if __name__ == "__main__":
     cat = ntnx_categories_py_client.Category(key=key, value=value, description=newDescription, owner_uuid=GetCategoryByIdResp.data.owner_uuid)
     # create kwargs for update_category
     kwargs = {"if_match": eTag}
-    UpdateCategoryByIdResp = UpdateCategoryById(categories_api, extId, cat)
-    print(UpdateCategoryByIdResp)
-
+    UpdateCategoryByIdResp = UpdateCategoryById(categories_api, extId, cat, kwargs)
+    # print(UpdateCategoryByIdResp)
+    print(f"Category Updated successfully with extId: {extId}")
 
     # use list apis to verify that the update is successful
     ListCategoriesResp = ListCategories(categories_api, filter)
-    print(ListCategoriesResp)
+    # print(ListCategoriesResp)
     if ListCategoriesResp.metadata.total_available_results != 1:
         print(f"ListCategories: Expected Total Entities: 1, Got: {ListCategoriesResp.data.total_entities}")
     elif ListCategoriesResp.data[0].description != newDescription:
         print(f"ListCategories: Expected Description: {newDescription}, Got: {ListCategoriesResp.data[0].description}")
     else:
-        print("ListCategories: Success")
+        print("ListCategories: Success --> Category Description Updated")
 
     # use get apis to verify that the update is successful
     GetCategoryByIdResp, _ = GetCategoryById(categories_api, extId)
-    print(GetCategoryByIdResp)
+    # print(GetCategoryByIdResp)
     if GetCategoryByIdResp.data.description != newDescription:
         print(f"GetCategoryById: Expected Description: {newDescription}, Got: {GetCategoryByIdResp.data.description}")
     else:
-        print("GetCategoryById: Success")
+        print("GetCategoryById: Success --> Category Description Updated")
 
     # use the delete api to delete the category
     DeleteCategoryByIdResp, _ = DeleteCategoryById(categories_api, extId)
-    print(DeleteCategoryByIdResp)
+    # print(DeleteCategoryByIdResp)
+    print(f"Category Deleted successfully with extId: {extId}")
 
     # use the get api to verify that the category is deleted and validate the response code is 404
     GetCategoryByIdResp, err_code = GetCategoryById(categories_api, extId)
     if err_code != "CTGRS-50006":
         print(f"GetCategoryById: Expected Error Code: CTGRS-50006, Got: {err_code}")
     else:
-        print("GetCategoryById: Success")
+        print("GetCategoryById: Success --> Category Already Deleted")
 
     # use delete api to verify that the category is already deleted and validate the response code is 404
     DeleteCategoryByIdResp, err_code = DeleteCategoryById(categories_api, extId)
     if err_code != "CTGRS-50006":
         print(f"DeleteCategoryById: Expected Error Code: CTGRS-50006, Got: {err_code}")
     else:
-        print("DeleteCategoryById: Success")
+        print("DeleteCategoryById: Success --> Category Already Deleted")
 
     # use the list api to verify that the category is deleted
     ListCategoriesResp = ListCategories(categories_api, filter)
     if ListCategoriesResp.metadata.total_available_results != 0:
         print(f"ListCategories: Expected Total Entities: 0, Got: {ListCategoriesResp.data.total_entities}")
     else:
-        print("ListCategories: Success")
+        print("ListCategories: Success --> Category Already Deleted")
