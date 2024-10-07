@@ -26,7 +26,7 @@ type ErrorMessage struct {
 func getApiClientInstance() *client.ApiClient {
 	ApiClientInstance := client.NewApiClient()
 	ApiClientInstance.SetVerifySSL(false)
-	ApiClientInstance.Host = "10.36.240.49"
+	ApiClientInstance.Host = "10.15.4.38"
 	ApiClientInstance.Port = 9440
 	ApiClientInstance.RetryInterval = 5000
 	ApiClientInstance.MaxRetryAttempts = 5
@@ -119,7 +119,7 @@ func main() {
 		glog.Error("ListCategories: Expected category ext_id: ", *cat.ExtId, " but got: ", *data[0].ExtId)
 	}
 	// fmt.Println("ListCategories: Category found!")
-	glog.Info("ListCategories: Category found!")
+	glog.Info("ListCategories: Success --> Category Found!")
 	// use the get api to get the category by ext_id
 	getCategoryResponse, err := CategoriesApiInstance.GetCategoryById(data[0].ExtId, nil, nil)
 	if err != nil {
@@ -128,7 +128,7 @@ func main() {
 		return
 	}
 	// fmt.Println("GetCategoryById: Category found!")
-	glog.Info("GetCategoryById: Category found!")
+	glog.Info("GetCategoryById: Success --> Category Found!")
 	cat = getCategoryResponse.GetData().(import1.Category)
 	// get eTag of the category
 	eTag := client.NewApiClient().GetEtag(getCategoryResponse.GetData())
@@ -150,7 +150,7 @@ func main() {
 		return
 	} else {
 		// fmt.Println("Update done successfully")
-		glog.Info("Update done successfully")
+		glog.Info("UpdateCategoryById: Success --> Category Updated!")
 	}
 	// use list apis to verify that the update is successful.
 	listCategoriesResponse, err = CategoriesApiInstance.ListCategories(nil, nil, &filter, nil, nil, nil)
@@ -170,7 +170,7 @@ func main() {
 			glog.Error("ListCategories: Expected description: ", newDescription, " but got: ", *data[0].Description)
 		} else {
 			// fmt.Println("ListCategories: Category updated successfully!")
-			glog.Info("ListCategories: Category updated successfully!")
+			glog.Info("ListCategories: Success --> Category Description Updated!")
 		}
 	}
 
@@ -188,7 +188,7 @@ func main() {
 		glog.Error("GetCategoryById: Expected description: ", newDescription, " but got: ", *cat.Description)
 	} else {
 		// fmt.Println("GetCategoryById: Category updated successfully!")
-		glog.Info("GetCategoryById: Category updated successfully!")
+		glog.Info("GetCategoryById: Success --> Category Description Updated!")
 	}
 
 	// use the delete api to delete the category
@@ -208,7 +208,7 @@ func main() {
 			glog.Error("GetCategoryById: Expected error code: CTGRS-50006, but got: ", code)
 		} else {
 			// fmt.Println("GetCategoryById: Category deleted successfully!")
-			glog.Info("GetCategoryById: Category deleted successfully!")
+			glog.Info("GetCategoryById: Success --> Category Already Deleted!")
 		}
 	} else {
 		// fmt.Println("GetCategoryById: Expected error: Category not found, but got none")
@@ -224,7 +224,7 @@ func main() {
 			glog.Error("DeleteCategoryById: Expected error code: CTGRS-50006, but got: ", code)
 		} else {
 			// fmt.Println("DeleteCategoryById: Category already deleted!")
-			glog.Info("DeleteCategoryById: Category already deleted!")
+			glog.Info("DeleteCategoryById: Success --> Category Already Deleted!")
 		}
 	} else {
 		// fmt.Println("DeleteCategoryById: Expected error: Category not found, but got none")
@@ -240,7 +240,7 @@ func main() {
 	}
 	if listCategoriesResponse.GetData() == nil {
 		// fmt.Println("ListCategories: Category deleted successfully!")
-		glog.Info("ListCategories: Category deleted successfully!")
+		glog.Info("ListCategories: Success --> Category Already Deleted!")
 	} else {
 		// fmt.Println("ListCategories: Expected nil category, but got ", listCategoriesResponse.GetData())
 		glog.Error("ListCategories: Expected nil category, but got ", listCategoriesResponse.GetData())
