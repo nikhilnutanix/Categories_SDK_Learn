@@ -58,9 +58,8 @@ func getErrorCode(err error) string {
 }
 
 func main() {
-	// Parse the command-line flags
-	flag.Parse()
 	flag.Set("alsologtostderr", "true")
+	flag.Parse()
 	ApiClientInstance := getApiClientInstance()
 	CategoriesApiInstance := getCategoriesApiInstance(ApiClientInstance)
 

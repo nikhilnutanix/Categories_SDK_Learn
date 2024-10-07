@@ -82,7 +82,12 @@ public class javaSDK {
 //        log.info("eTag: {}", eTag);
         // use the put api to update the description of the category.
         String newDescription = "new description";
-        UpdateCategoryApiResponse response3 = UpdateCategory(categoriesApi, extId, key, newDescription, value, etag);
+        try {
+            UpdateCategoryApiResponse response3 = UpdateCategory(categoriesApi, extId, key, newDescription, value, etag);
+        } catch (RestClientException e) {
+            log.error("Category not updated: {}", e.getMessage());
+//            exit(1);
+        }
 //        log.info("Category updated: {}", response3.getData().toString());
 //        // use list apis to verify that the update is successful.
         ListCategoriesApiResponse response4 = ListCategories(categoriesApi, String.format("key eq '%s' and value eq '%s'", key, value));
